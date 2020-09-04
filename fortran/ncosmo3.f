@@ -3,28 +3,13 @@ c***********************************************************************
 c
       subroutine is_cosmology_defined
 c
-c     Verify if cosmology parameters are set and select mode to calculate:
-c     i.e., if reproducing the plots (and values) obtained using 
-c     Hogg, D. W. 1999, astro-ph/990511v4 from 2000-12-16 (mode 1)
-c     or from Ned Wright's Cosmology calculator (modes 2 and 3), described
-c     in  Wright, E. L. 2006, PASP, 118, 1711
-c
-c     options
-c     1. lambda  = 0, no neutrinos       (e.g., Hogg 1999)
-c     2. lambda != 0, no neutrinos       (e.g., Hogg 1999)
-c     3. massless neutrinos (original calculator)
-c     4. neutrino masses + equation of state
-c
-c     In option 1 omega_r = 0,  omega_l = 0 omega_cm = omega_m 
-c     In option 2 omega_r = 0               omega_cm = omega_m 
-c     In option 3 omega_r = 4.165d-05/h**2, omega_cm = omega_m
-c     in option 4 omega_r = 2.473d-05/h**2, omega_m = omega_nu + omega_cm
-c     where omega_m = omega_cm + omega_nu
+c     Verify if cosmology parameters are set. If not read file with
+c     the latest parameters.
 c
 c     (C) Copyright 2015 Christopher Willmer
 c     Steward Observatory, University of Arizona
 c     cnaw@as.arizona.edu 
-c     2015-03-19
+c     2015-03-19, 2020-09-02
 c
 c------------------------------------------------------------------------------
 c This routine is free software; you can redistribute it and/or modify it
@@ -39,97 +24,25 @@ c-----------------------------------------------------------------------------
 c
       implicit none
       integer mode
-      double precision tnow, t0, n_eff, eps, h
+      double precision tnow, t0, n_eff, eps, h, year
       double precision omega_neutrino
       double precision  h0, omega_m, omega_l, omega_k, omega_r, 
      *     omega_nu, omega_cm, w, wprime
       parameter(eps = 1.d-16)
       common /cosmology/ h0, omega_m, omega_l, omega_k, omega_r, 
      *     omega_nu, omega_cm, w, wprime
+      common /constants/ year, tnow
 c
-      if(h0 .le. 0.0d0 .or. omega_m .le.0) then
-         print *, '  '
-         print *, 'need to define cosmology parameters !'
-         print *, 'h0, omega_m, omega_l', h0,omega_m, omega_l
-         print *, '  '
-         stop
-      end if
+c     If cosmological parameters are defined, nothing to do
 c
-      h = h0/100.d0
+      if(h0.ne.0.d0 .and. omega_m.ne.0.0d0) return
 c
-c     from Planck collaboration 2015, Astro-ph/1502.01589v2
-c
-      n_eff = 3.15              
-c
-      if(omega_r .eq.0.d0 .and. omega_nu .eq.0.0d0) mode = 1
-      if(omega_r .ne.0.d0 .and. omega_nu .eq.0.0d0) mode = 2
-      if(omega_r .ne.0.d0 .and. omega_nu .ne.0.0d0) mode = 3
-c
-c     Uncomment if you really want to use the values of Ned Wright's calculator
-c      if(mode.eq.3) mode = 4
-c
-c     mode 1 reproduces the Hogg (2000) plots for Einstein-de Sitter,
-c     omega_m = 0.05, omega_l = 0.0 and omega_l=0.2, omega_l = 0.8 
-c     models; mode = 4 uses Ned Wright's values of his Advanced calculator
-c
+c     otherwise read parameters
 c     
-      if(mode.eq.1) then
-         omega_cm = omega_m
-         w        = -1.0d0
-         wprime   =  0.0d0
-         omega_k  = 1 - omega_m - omega_l
-         if(dabs(omega_k).lt.eps) omega_k = 0.0d0
-         return
-      end if
+      call read_constants
+      omega_k  = 1 - omega_m - omega_l - omega_r
+      wprime   = 0.0d0
 c
-c     mode 2 reproduces E. L. Wright's (2006) default calculator
-c     http://www.astro.ucla.edu/~wright/CC.html
-c     using 3 massless neutrinos and T0 = 2.72528 K in addition to
-c     values of omega_m and omega_l
-c
-      if(mode.eq.2) then
-         omega_cm = omega_m
-c     omega_nu =  0.0d0
-c     omega_r  = 4.165d-05/(h*h)
-c     w        = -1.0d0
-c     wprime   =  0.0d0
-         omega_k  = 1 - omega_m - omega_l - omega_r
-         if(dabs(omega_k).lt.eps) omega_k = 0.0d0
-         return
-      end if
-c
-c     mode 3 follows E. L. Wright's (2006) advanced cosmology calculator
-c     http://www.astro.ucla.edu/~wright/ACC.html
-c     which includes the equation of energy and neutrino masses
-c     The paper quotes a value of 2.778d-05 for the CMB radiation density, while
-c     the calculator uses 2.477d-05. The calculator uses Tnow = 2.72528d0
-c     The value for the CMB radiation density quoted in the 
-c     Review of Particle Physics 2014 edition 
-c     (Olive, K. A. et al. 2014 Chin. Phys. C, 38, 090001) is
-c     Omega_r = 2.473e-5 (T/2.7255)**4 h**−2
-c     The most recent value of Tnow = 2.7255d0 +/- 0.0006 K by 
-c     Fixsen 2009, ApJ, 707, 916
-c     
-      if(mode.eq.3) then
-         omega_cm = omega_m - omega_nu
-         tnow     = 2.7255d0
-         t0       = tnow
-         omega_r  = 2.473d-05/(h*h)*(t0/tnow)**4 
-         omega_k  = 1 - omega_m - omega_l - omega_r
-      end if
-c
-c     force to use Ned Wright's values. However the differences are 
-c     insignificant relative to the Fixsen + Review of Particle Physics values:
-c     ~ 0.02% for the co-moving volume and 2.2d-05% for the luminosity distance
-c     To make this run you have to uncomment the if(mode.eq.3) line above
-c
-      if(mode.eq.4) then
-         omega_cm = omega_m - omega_nu
-         tnow     = 2.72528d0 ! value used by Wright (2006)
-         t0       = tnow
-         omega_r  = 2.477d-05/(h*h)*(t0/tnow)**4 ! value used by Wright (2006)
-         omega_k  = 1 - omega_m - omega_l - omega_r
-      end if
       return
       end
 c
@@ -150,23 +63,37 @@ c     rho_rad = [ 1 + (7/8) * (4/11)**(4/3) * n_eff] * rho_photons (eq. 1)
 c     where rho_photons is the present energy density of photons coming
 c     from CMB temperature
 c
+c     Wright(2003) quotes a value of 93.14 eV for the normalisation (eq.18);
+c     the Calculator itself uses different values for the electron and mu and  tau
+c     neutrinos (93.64, 93.90, 93.90); 
+c     Hannestad & Madsen 1995,  quote (92.55, 92.80, 92.80), for T=2.736K
+c     Mangano et al. (2005) hep-ph/0506164 use 93.14; 
+c
+c     https://pdg.lbl.gov/2020/reviews/rpp2020-rev-astrophysical-constants.pdf
+c     quotes 93.14 based on Planck Collab. 2018 Results VI (2018), arXiv:1807.06209
+c
+c     cnaw@as.arizona.edu
+c     2015-02-19, 2020-09-02
+c
       implicit none
       double precision m_e, m_mu, m_tau, cee, h, m_rel, sum, beta, a, 
-     *     tnow, t0, m_nu, nu_temp, momentum, result, nurho, one_ev, z
+     *     t0, m_nu, nu_temp, momentum, result, nurho, one_ev, z
       integer i
       dimension m_nu(3)
       double precision  h0, omega_m, omega_l, omega_k, omega_r, 
-     *     omega_nu, omega_cm, w, wprime
+     *     omega_nu, omega_cm, w, wprime, neutrino_norm
+      double precision year, tnow
+      common /constants/ year, tnow
       common /cosmology/ h0, omega_m, omega_l, omega_k, omega_r, 
      *     omega_nu, omega_cm, w, wprime
 c
       h           = h0/100.d0
       cee         = 299792.458d0
-      m_e         = 0.001d0     ! Neutrino mass in eV/cee**2
-      m_mu        = 0.009d0     ! eV/cee**2
-      m_tau       = 0.049d0     ! ev/cee**2
-      tnow        = 2.72528d0   ! K
-      t0          = tnow        ! should this be a variable ?
+      m_e         = 0.001d0     ! Neutrino mass in eV/cee**2  (Wright 2006, PASP, 118,1171)
+      m_mu        = 0.009d0     ! eV/cee**2 (Wright 2006, PASP, 118,1171)
+      m_tau       = 0.049d0     ! ev/cee**2 (Wright 2006, PASP, 118,1171)
+      neutrino_norm = 93.14d0   ! eV 
+      t0          = tnow        ! T0 can vary if one wants to estimate Omega_nu at different zs
       one_ev      = 11604.505d0
 c
       m_nu(1)     = m_e
@@ -174,7 +101,7 @@ c
       m_nu(3)     = m_tau
 c
 c     The  present day neutrino temperature relative to the photon 
-c     temperature given by the CMB (Wright 2006, Section 5):
+c     temperature given by the CMB (Wright 2006, PASP, 118, 1171,  Section 5):
 c
       nu_temp = t0 * (4.d0/11.d0)**0.333333333333d0
 c
@@ -182,17 +109,6 @@ c     Mass of a neutrino "that is just now relativistic"
 c
       momentum = 3.151d0 * nu_temp 
       m_rel    = (momentum/one_ev) * (t0/tnow)
-c     The values printed below match those on paper (Section 5)
-c      print *,' nu_temp, momentum, m_rel',nu_temp, momentum, m_rel
-c
-c     While the paper quotes a value of 93.14 eV for the normalisation (eq.18),
-c     the ACC itself uses different values for the electron and mu and  tau
-c     neutrinos (93.64, 93.90, 93.90); 
-c     Hannestad & Madsen 1995,  quote (92.55, 92.80, 92.80), for T=2.736K
-c     Mangano et al. (2005) hep-ph/0506164 use 93.14; a normalisation value
-c     of 93.04 eV for the three species is used in the 
-c     Review of Particle Physics 2014 edition:
-c     Olive, K. A. et al. 2014 Chin. Phys. C, 38, 090001
 c
       a    = 1.d0/(1.d0+z)
       sum  = 0.0d0
@@ -204,7 +120,7 @@ c            omega_neutrino = omega_neutrino + result * m_nu(i)/93.64d0
 c         else
 c            omega_neutrino = omega_neutrino + result * m_nu(i)/93.90d0
 c         end if
-         omega_neutrino = omega_neutrino + result * m_nu(i)/93.04d0
+         omega_neutrino = omega_neutrino+result*m_nu(i)/neutrino_norm
       end do
       omega_neutrino = omega_neutrino *(t0/tnow)**3
       omega_neutrino = omega_neutrino/(h*h)
@@ -267,11 +183,12 @@ c     Convert Hubble times into Gyr
 c     constants from 
 c     http://pdg.lbl.gov/2014/reviews/rpp2014-rev-astrophysical-constants.pdf
 c     http://pdg.lbl.gov/2014/reviews/contents_sports.html
+c     https://pdg.lbl.gov/2020/reviews/rpp2020-rev-astrophysical-constants.pdf
 c
 c     (C) Copyright 2015 Christopher Willmer
 c     Steward Observatory, University of Arizona
 c     cnaw@as.arizona.edu 
-c     2015-02-19
+c     2015-02-19, 2020-09-02
 c
 c------------------------------------------------------------------------------
 c This routine is free software; you can redistribute it and/or modify it
@@ -285,13 +202,14 @@ c GNU General Public License for more details.
 c-----------------------------------------------------------------------------
 c
       implicit none
-      double precision r_mpc, year,th_hubble 
+      double precision r_mpc, th_hubble 
       double precision  h0, omega_m, omega_l, omega_k, omega_r, 
      *     omega_nu, omega_cm, w, wprime
+      double precision year, tnow
+      common /constants/ year, tnow
       common /cosmology/ h0, omega_m, omega_l, omega_k, omega_r, 
      *     omega_nu, omega_cm, w, wprime
       r_mpc     = 3.08567758149d19 ! km
-      year      =  31556925.2 ! tropical year in seconds for 2011
       th_in_gyr = r_mpc/h0/year/1.d9 * th_hubble
       return
       end
@@ -700,7 +618,9 @@ c
      *     omega_nu, omega_cm, w, wprime
       external zplus1ezi
 c
-      call is_cosmology_defined
+c      call is_cosmology_defined
+      print *,  h0, omega_m, omega_l, omega_k, omega_r, 
+     *     omega_nu, omega_cm, w, wprime
 c
       m1 = 16
       eps = 1.0d-16

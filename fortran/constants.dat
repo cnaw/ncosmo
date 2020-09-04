@@ -1,0 +1,15 @@
+# 2018 Planck astro-ph/1807.06209  Table 2, model : TT, TE, EE+lowE+lensing (Pl2018)
+# 2020  https://pdg.lbl.gov/2020/reviews/rpp2020-rev-astrophysical-constants.pdf (rpp2020)
+0.02237  +/- 0.00015 * h**(-2)  Pl2018  Omega_b  baryon density of the Universe
+0.1200   +/- 0.012)  * h**(-2)  Pl2018  Omega_cm dark matter density of the Universe
+0.3153   +/- 0.0073             Pl2018  Omega_m  = Omega_cm + Omega_b  Pressureless matter density
+0.6847   +/- 0.0073             Pl2018  Omega_l  dark energy density parameter 
+0.12                        eV  Pl2018  m_nu     sum of neutrino masses (eV)
+67.36    +/- 0.54               Pl2018  Hubble constant
+-1.028   +/- 0.031              Pl2018  w        dark energy equation of state parameter
+2.7255   +/- 0.006 K            rpp2020 Tnow     present day CWB temperature (Fixsen 2009, ApJ, 707, 916)
+2.473e-5 * (T/Tnow) **4 h**(−2) rpp2020 Omega_r  CWB radiation density
+0.003                           rpp2020 Omega_nu neutrino density of the Universe
+31556925.1                  yr  rpp2020 tropical year in seconds for 2020
+3.08567758149e19           Mpc  rpp2020 1 Mega-parsec in metres
+0.0007  +/- 0.0019              rpp2020 Omega_k  curvature 
